@@ -15,16 +15,79 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+```{r heart attack}
+dataset = read.csv("heart_mod_2023-02-08.csv", sep = 'p')
+
+# Paciente 86(chol): valor de 5 es muy bajito. Se escribe missing value (NA).
+# Paciente 158(age):  valor de 350 es imposible. Se escibe missing value (NA).
+
+sapply(dataset,class)
+
+dataset$sex <- as.factor(dataset$sex)
+levels(dataset$sex) <- c('Female','Male')
+table(dataset$sex)
+
+dataset$cp <- as.factor(dataset$cp)
+levels(dataset$cp) <- c('Asymptomatic', 'Atypical angina', 'No angina', 'Typical angina')
+
+dataset$fbs <- as.factor(dataset$fbs)
+levels(dataset$fbs) <- c('No', 'Yes')
+
+dataset$restecg <- as.factor(dataset$restecg)
+levels(dataset$restecg) <- c('Hypertrophy','Normal','Abnromalities')
+
+dataset$exang <- as.factor(dataset$exang)
+levels(dataset$exang) <- c('No','Yes')
+
+dataset$slope <- as.factor(dataset$slope)
+levels(dataset$slope) <- c('Descending','Flat','Ascending')
+
+dataset$chol <- as.numeric(dataset$chol)
+
+dataset$thal <- as.factor(dataset$thal)
+levels(dataset$thal) <- c('Fixed defect','Normal flow','Reversible defect')
+
+dataset$target <- as.character(dataset$target)
+
+dataset$target[dataset$target == "11"] <- "1"
+dataset$target[dataset$target == "O"] <- "0"
+
+dataset$target
+
+
+dataset$target <- as.factor(dataset$target)
+levels(dataset$target) <- c('Yes','No')
+
+dataset <- dataset[,-1]
+
+dataset$oldpeak <- gsub(",",".", dataset$oldpeak)
+type_class <- sapply(dataset,class)
+table(type_class)
+
+df_variable <- data.frame(nombre = names(dataset), tipo = type_class)
+
+data_num <- dataset[,type_class %in% c('integer','numeric')]
+data_fac <- dataset[,type_class %in% c('factor')]
+
+dataset$chol[dataset$chol == 5] <- NA
+dataset$trestbps[dataset$trestbps == 1540] <- 154
+
+dataset$age[dataset$age > 200] <- NA
+data_num$age
+mean_age<- mean(dataset$age, na.rm = TRUE)
+data_num$age[is.na(data_num$age)] <- mean_age
+par(mfrow = c(1,2))
+hist(data_num$age, c = 'blue', main = "Histogram of age")
+boxplot(data_num$age, col = 'blue', main = "Boxplot of age")
+
+mean_trestbps <- mean(dataset$trestbps, na.rm = TRUE)
+data_num$trestbps[is.na(data_num$trestbps)] <- mean_trestbps
+hist(data_num$trestbps)
+
+dataset
+
+
+
+
+
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
