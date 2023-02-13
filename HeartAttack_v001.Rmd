@@ -71,8 +71,10 @@ data_fac <- dataset[,type_class %in% c('factor')]
 
 dataset$chol[dataset$chol == 5] <- NA
 dataset$trestbps[dataset$trestbps == 1540] <- 154
+data_num$trestbps[data_num$trestbps == 1540] <- 154
 
-dataset$age[dataset$age > 200] <- NA
+
+data_num$age[data_num$age > 200] <- NA
 data_num$age
 mean_age<- mean(dataset$age, na.rm = TRUE)
 data_num$age[is.na(data_num$age)] <- mean_age
@@ -85,6 +87,48 @@ data_num$trestbps[is.na(data_num$trestbps)] <- mean_trestbps
 hist(data_num$trestbps)
 
 dataset
+
+par(mfrow = c(2,3))
+for (i in data_num[1:5]){
+  boxplot(i)
+}
+
+pdf(file = "~/Documents/Machine Learning 1/ml_class2/Diego_Rosado_barplots.pdf")
+par(mfrow = c(4,2))
+for (i in 1:8){
+  valores = table(data_fac[,i])
+  proporciones = prop.table(valores)
+  pvalores = round(chisq.test(valores)$p.value, digits = 11)
+  colores = ifelse(pvalores < 1e-15, 1,2)
+  barplot(proporciones, horiz = TRUE, main = paste0(names(data_fac[i]), ' - p.value = ',pvalores), col = colores)
+}
+dev.off
+
+
+centralizados <- function(var_num){
+  mean_var <-  mean(var_num, na.rm = T)
+  var_cen <- var_num - mean_var
+  var_sd <- sd(var_num, na.rm = T)
+  var_cen_sd <- var_cen/var_sd
+  return(var_cen_sd)
+}   
+
+
+```
+
+```{r heart attack}
+datos_centralizados 
+for (i in data_num[1:5]){
+  mis_valores_centralizados <-centralizados(i)
+  
+  
+}
+
+
+
+```
+
+```{r}
 
 
 
