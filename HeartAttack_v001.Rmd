@@ -117,18 +117,20 @@ centralizados <- function(var_num){
 ```
 
 ```{r heart attack}
-datos_centralizados 
-for (i in data_num[1:5]){
-  mis_valores_centralizados <-centralizados(i)
-  
-  
+datos_centralizados <- matrix(nrow = 303, ncol = 5)
+for (i in 1:length(data_num)){
+  datos_centralizados[,i] <- centralizados(data_num[,i])
 }
 
+datos_centralizados <- as.data.frame(datos_centralizados)
+
+data_num_total <- cbind(data_num,datos_centralizados)
 
 
 ```
 
 ```{r}
+
 
 
 
