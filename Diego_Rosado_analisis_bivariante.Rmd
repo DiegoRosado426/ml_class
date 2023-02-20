@@ -1,0 +1,166 @@
+---
+title: "Diego_Rosado_analisis_bivariante"
+author: "Diego Rosado"
+date: "2023-02-15"
+output: html_document
+---
+
+Mi URL para github: https://github.com/DiegoRosado426/ml_class
+
+## Modificar y ajustar conjunto de datos
+
+Antes de comenzar el análisis de bivariante para el conjunto de datos que tenemos, es necesario modificar los datos para poder proceder a nuestro análisis. Hemos dividido nuestro conjunto de datos en variables categóricas y variables numéricas. Para poder llevar a cabo el modelado estadístico, hemos convertido las variables categóricas en factores y ahora podemos representar los datos categóricos. Al convertir las variables categóricas en factores, hemos predeterminado los valores que puede coger la variable y a estos valores se le refiere como niveles. En adición, hemos corregido ciertos fallos en el conjunto de datos así como valores inadecuados para algunas variables. Para hacer estas correcciones, hemos eliminado algunos dígitos de los valores para las variables numéricas en donde los errores eran muy claros. Para aquellos errores que son menos obvio, le hemos asignado 'NA'. Por último, para modelar todos los datos en la misma escala, hemos centralizado los datos numéricos.
+
+
+
+```{r}
+dataset = read.csv("heart_mod_2023-02-08.csv", sep = 'p')
+
+dataset$sex <- as.factor(dataset$sex)
+levels(dataset$sex) <- c('Female','Male')
+
+dataset$cp <- as.factor(dataset$cp)
+levels(dataset$cp) <- c('Asymptomatic', 'Atypical angina', 'No angina', 'Typical angina')
+
+dataset$fbs <- as.factor(dataset$fbs)
+levels(dataset$fbs) <- c('No', 'Yes')
+
+dataset$restecg <- as.factor(dataset$restecg)
+levels(dataset$restecg) <- c('Hypertrophy','Normal','Abnromalities')
+
+dataset$exang <- as.factor(dataset$exang)
+levels(dataset$exang) <- c('No','Yes')
+
+dataset$slope <- as.factor(dataset$slope)
+levels(dataset$slope) <- c('Descending','Flat','Ascending')
+
+dataset$chol <- as.numeric(dataset$chol)
+
+dataset$thal <- as.factor(dataset$thal)
+levels(dataset$thal) <- c('Fixed defect','Normal flow','Reversible defect')
+
+dataset$target <- as.character(dataset$target)
+
+dataset$target[dataset$target == "11"] <- "1"
+dataset$target[dataset$target == "O"] <- "0"
+
+dataset$target <- as.factor(dataset$target)
+levels(dataset$target) <- c('Yes','No')
+
+dataset <- dataset[,-1]
+
+dataset$oldpeak <- gsub(",",".", dataset$oldpeak)
+dataset$oldpeak <- as.numeric(dataset$oldpeak)
+type_class <- sapply(dataset,class)
+
+df_variable <- data.frame(nombre = names(dataset), tipo = type_class)
+
+data_num <- dataset[,type_class %in% c('integer','numeric')]
+data_fac <- dataset[,type_class %in% c('factor')]
+
+dataset$chol[dataset$chol == 5] <- NA
+dataset$trestbps[dataset$trestbps == 1540] <- 154
+data_num$trestbps[data_num$trestbps == 1540] <- 154
+
+data_num$age[data_num$age > 200] <- NA
+mean_age<- mean(dataset$age, na.rm = TRUE)
+data_num$age[is.na(data_num$age)] <- mean_age
+
+
+mean_trestbps <- mean(dataset$trestbps, na.rm = TRUE)
+data_num$trestbps[is.na(data_num$trestbps)] <- mean_trestbps
+
+centralizados <- function(var_num){
+  mean_var <-  mean(var_num, na.rm = T)
+  var_cen <- var_num - mean_var
+  var_sd <- sd(var_num, na.rm = T)
+  var_cen_sd <- var_cen/var_sd
+  return(var_cen_sd)
+}   
+
+for (i in names(data_num)){
+  data_num[paste0(i,"_centralizados")] <- centralizados(data_num[,i])
+}
+```
+
+
+
+## Boxplots para variables numéricas
+
+Para poder visualizar la distribución de los valores para las variables numéricas, hemos creado unos boxplots en donde dividimos los valores entre los pacientes que sí están enfermos del corazón y aquellos que no lo están. Como tenemos 6 variables numéricas en nuestro conjunto de datos, hemos creado 6 boxplots distintas para cada variable. 
+
+
+
+
+```{r}
+
+data_num["target"] <- data_fac$target
+xlabels <-  c("Yes","No")
+
+par(mfrow = c(3,2))
+for(i in 7:12) {
+  boxplot(data_num[,i] ~ data_num[,13], names = xlabels, main =paste0(names(data_num[i])," ~ target" ), xlab = NULL, ylab = NULL, col = "red")
+}
+
+
+```
+
+## Barplots para variables categóricas
+
+Para poder observar las distribuciones de las variables categóricas, no podemos utilizar un boxplot como hicimos con las variables numéricas. Es por eso que utilizamos barplots para poder observar las distribuciones de estas variables. Los niveles de estas variables luego son dividos en aquellos pacientes que sí están enfermos del corazón y aquellos que no en respecto al color asignado.
+
+
+
+```{r}
+
+target_value <- prop.table(table(data_fac[8]))
+par(mfrow = c(2,4))
+for (i in 1:7) {
+  valores1 = table(data_fac[,8],data_fac[,i])
+  proporciones1 = prop.table(valores1)
+  barplot(proporciones1, main = colnames(data_fac[i]),legend.text = TRUE,args.legend = list(cex = 0.60), cex.names = 0.8, col = c("red","blue"),beside = FALSE)
+
+}
+
+```
+
+
+## Modelos lineales generalizados para variables numéricas
+
+Los modelos lineales son utilizados para observar el efecto que tiene la variable independiente en la variable dependiente e identificar si influye de manera estadísticamente significativa. Es por eso que hemos realizado modelos lineales generalizados para la variable dependiente (que en este caso es si el paciente está enfermo del corazón o no) en función de las variables numéricas que son las variables independientes. Luego de adquirir los valores p, los hemos representado en un barplot para poder visualizarlos. Podemos determinar que las variables correpondiendo a "ca", "oldpeak", "thalach" y "age" influyen de manera estadísticamente significativa en la enfermedad del corazón de los pacientes ya que tienen un valor p menor de 0,05 mientras las variables "chol" y "trestbps" no influyen de manera estadísticamente significativa. 
+
+
+```{r}
+mis_pvalores_var_num <- NULL
+for (i in 7:12){
+  modelos_var_num <- glm(data_num[,13] ~ data_num[,i], family = binomial(link = "logit"))
+  mis_pvalores_var_num <- c(mis_pvalores_var_num,(summary(modelos_var_num)$coefficients[2,4]))
+  
+}
+
+nombres_pvalores <- colnames(data_num[1:6])
+
+barplot(mis_pvalores_var_num, horiz = TRUE, names = nombres_pvalores,cex.names = 0.6, las = 1, col = 'blue', xlab = "Valor p")
+```
+
+
+## Modelos lineales generalizados para variables categóricas
+
+Cuando hacemos un modelo lineal generalizado y consideramos la interacción de dos variables categóricas, la visualización es un poco más compleja. Como estamos analizando variables categóricas, hay que considerar la manera en que influye cada nivel en cada variable. Se considera estadísticamente significativo si el valor p es menor de 0,05 y podemos observar que de todas los valores p adquiridos de los modelos lineales generalizados, solo los niveles de "reversable defect(thal)", "flat(slope)", "abnormalities(ecg)" y "yes(fbs)" no tienen un valor p menor de 0,05. Esto significa que estos niveles de sus variables correspondientes no influyen de manera estadísticamente signficativa en la enfermedad del corazón del paciente y que los otros niveles sí influyen de manera estadísticamente significativa.
+
+
+```{r}
+mis_pvalores_var_fac <- NULL
+nombres_pvalores2 <- NULL
+for (i in 1:7){
+  modelos_var_fac <- glm(data_fac[,8] ~ data_fac[,i], family = binomial(link = "logit"))
+  mis_pvalores_var_fac <- c(mis_pvalores_var_fac, (summary(modelos_var_fac)$coefficients[2:max(nlevels(data_fac[,i])),4]))
+  nombres_pvalores2 <- c(nombres_pvalores2,paste0(names(modelos_var_fac$coefficients), ' (',colnames(data_fac[i]), ')'))
+
+}
+
+nombres_pvalores2 <- nombres_pvalores2[-c(1,3,7,9,12,14,17)]
+library(stringr)
+nombres_pvalores2 <- str_sub(nombres_pvalores2, start = 14)
+barplot(mis_pvalores_var_fac, horiz = TRUE, names =  nombres_pvalores2, cex.names = 0.4, las = 1, col = 'green', xlab = "Valor p")
+```
