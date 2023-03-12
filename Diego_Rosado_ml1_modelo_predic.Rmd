@@ -1,0 +1,260 @@
+---
+title: "Diego_Rosado_ml1_Modelo_Predictivo"
+author: "Diego Rosado"
+date: "2023-02-28"
+output: html_document
+---
+
+Github: <https://github.com/DiegoRosado426/ml_class>
+
+### Introducción al dataset
+
+El dataset utilizando para crear este modelo predictivo proviene de una base de datos creada por Dr. William H. Wolberg para el cancer de mama en *University of Wisconsin Hospitals, Madison*. Las muestras llegaban de manera periódica mientras el Dr. Wolberg hacía reportajes sobre sus casos clínicos. Esta base de datos tiene un total de 699 instancias donde cada una tiene once atributos. Por último, nuestra variable *target* para este dataset es *Class* que es una vairable categórica compuesta por dos niveles, *Benign* y *Malignant.* A tráves de los valores que le corresponden a las variables predictoras, podremos determinar el valor de la variable *target* que nos dice si el tumor es benigno o maligno.
+
+Antes de poder crear nuestros modelos para el dataset, es necesario limpiar y modificar los datos para que se puedan utilizar de una manera adecuada. Para este archivo que contiene los datos, hemos eliminado los separadores que dividen cada columna que en el caso de los datos de *training* eran "h\_". Luego hemos creado un data frame con los datos y le hemos asignado el nombre correspondiente a cada columna. En la base de datos, se encontraban valores con signos interrogativos que identificaban los valores NA y los hemos identificado de esa manera en el data frame. Adicionalmente, había una cantidad de valores que no caían dentro del rango de valores posibles para cada variable y se tomaron las decisiones adecuadas para poder incluir estos valores. Por ejemplo, como los valores posibles para cada variable van del 1-10, si aparecía un valor igual a 20, se le asignaba el valor de 2 y así hicimos con los otros valores inapropiados en el dataset. Por último, hemos clasificado aquellas variables que van desde la columna 1 hasta la 10 como variables numéricas y aquellas en las columnas 11 y 12 como categóricas. Las columnas 11 y 12 le corresponden a *Group* y *Class,* respectivamente.
+
+```{r}
+dataset <-  read.csv("Breast_Cancer_train.data",sep = "h", header = FALSE)
+mis_datos <- data.frame(lapply(X = dataset, FUN = function(t) gsub(pattern = "_", replacement = "", x = t, fixed = TRUE)))
+colnames(mis_datos) <- c("Sample_Code_Number","Clump_Thickness","Uniformity_of_Cell_Size","Uniformity_of_Cell_Shape","Marginal_Adhesion","Single_Epithelial_Cell_Size","Bare_Nuclei","Bland_Chromatin","Normal_Nucleoli","Mitoses","Group","Class")
+
+# Columna: Class
+mis_datos[mis_datos == "?"] <- NA
+unique(mis_datos$Class)
+mis_datos$Class[mis_datos$Class == "3"] <- NA
+mis_datos$Class[mis_datos$Class == "44"] <- 4 
+mis_datos$Class[mis_datos$Class == "20"] <- 2
+mis_datos$Class <- as.factor(mis_datos$Class)
+levels(mis_datos$Class) <- c("Benign","Malignant")
+
+# Columna: Group
+unique(mis_datos$Group)
+mis_datos$Group <- as.factor(mis_datos$Group)
+levels(mis_datos$Group) <- c('Group_1','Group_2','Group_3','Group_4','Group_5','Group_6','Group_7','Group_8')
+
+# Columnas numéricas
+library("dplyr")
+mis_datos <- mis_datos%>% 
+  mutate_at(c("Sample_Code_Number","Clump_Thickness","Uniformity_of_Cell_Size","Uniformity_of_Cell_Shape","Marginal_Adhesion","Single_Epithelial_Cell_Size","Bare_Nuclei","Bland_Chromatin","Normal_Nucleoli","Mitoses"), as.numeric)
+tipo_clase <- sapply(mis_datos,class)
+
+# Columna Clump_Thickness
+unique(mis_datos$Clump_Thickness)
+mis_datos$Clump_Thickness[mis_datos$Clump_Thickness == 100] <- 10
+mis_datos$Clump_Thickness[mis_datos$Clump_Thickness == 30] <- 3
+
+# Columna Uniformity_of_Cell_Size
+unique(mis_datos$Uniformity_of_Cell_Size)
+mis_datos$Uniformity_of_Cell_Size[mis_datos$Uniformity_of_Cell_Size == 30] <- 3
+
+# Columna Uniformity_of_Cell_Shape
+unique(mis_datos$Uniformity_of_Cell_Shape)
+mis_datos$Uniformity_of_Cell_Shape[mis_datos$Uniformity_of_Cell_Shape == 80] <- 8
+mis_datos$Uniformity_of_Cell_Shape[mis_datos$Uniformity_of_Cell_Shape == -7] <- 7
+
+# Columna Marginal_Adhesion
+unique(mis_datos$Marginal_Adhesion)
+mis_datos$Marginal_Adhesion[mis_datos$Marginal_Adhesion == 100] <- 10
+mis_datos$Marginal_Adhesion[mis_datos$Marginal_Adhesion == -1] <- 1
+
+# Columna Single_Epithelial_Cell_Size
+unique(mis_datos$Single_Epithelial_Cell_Size)
+mis_datos$Single_Epithelial_Cell_Size[mis_datos$Single_Epithelial_Cell_Size == 60] <- 6
+mis_datos$Single_Epithelial_Cell_Size[mis_datos$Single_Epithelial_Cell_Size == 100] <- 10
+
+# Columna Bare_Nuclei
+unique(mis_datos$Bare_Nuclei)
+
+# Columna Bland_Chromatin
+unique(mis_datos$Bland_Chromatin)
+mis_datos$Bland_Chromatin[mis_datos$Bland_Chromatin == 11] <- 1
+
+# Columna Normal_Nucleoli
+unique(mis_datos$Normal_Nucleoli)
+
+df_mis_variables <- data.frame(tipo_de_clase = tipo_clase)
+
+
+```
+
+### Distribución variables numéricas
+
+Para poder visualizar la distribución de los valores para las variables numéricas, hemos creado unos boxplots en donde dividimos los valores entre los pacientes que sí tienen un tumor benigno y aquellos que tienen un tumor maligno. Como tenemos 9 variables numéricas en nuestro conjunto de datos, hemos creado 9 boxplots distintas para cada variable.
+
+```{r}
+par(mfrow = c(2,5))
+for(i in 2:10) {
+  boxplot(mis_datos[,i] ~ mis_datos[,12], main =paste0(names(mis_datos[i])," ~ Class" ), xlab = NULL, ylab = NULL, col = "red")
+}
+```
+
+### Distribución variables categóricas
+
+Para poder observar la distribución de la otra variable categórica en el dataset aparte de nuestra variable *target*, no podemos utilizar un boxplot como hicimos con las variables numéricas. Es por eso que utilizamos barplots para poder observar las distribución de esta variable. Los niveles de esta variable categórica luego son divididos entre ocho grupos que le corresponden a cada reportaje del Dr. Wolberg con una cierta cantidad de casos clínicos.
+
+```{r}
+valores = table(mis_datos[,12],mis_datos[,11])
+proporciones1 = prop.table(valores)
+barplot(proporciones1, main = colnames(mis_datos[,11]),legend.text = TRUE,args.legend = list(cex = 0.60), cex.names = 0.8, col = c("red","blue"),beside = FALSE)
+
+```
+
+### Modelos lineales generalizados para variables numéricas
+
+Los modelos lineales son utilizados para observar el efecto que tiene la variable independiente en la variable dependiente e identificar si influye de manera estadísticamente significativa. Es por eso que hemos realizado modelos lineales generalizados para la variable dependiente (que en este caso es si el paciente tiene un tumor maligno o benigno) en función de las variables numéricas que son las variables independientes.Para estos modelos, hemos considerado un valor p significativo como uno menor de 0,05. Luego de adquirir los valores p de los modelos, cada uno salió estadísticamente significativo.
+
+```{r}
+mis_pvalores_var_num <- NULL
+for (i in 2:10){
+  modelos_num <- glm(mis_datos[,12] ~ mis_datos[,i], family = binomial(link = "logit"))
+  mis_pvalores_var_num <- c(mis_pvalores_var_num,(summary(modelos_num)$coefficients[2,4]))
+  
+}
+nombres_variables <- names(mis_datos[2:10])
+mis_pvalores_var_num <- data.frame(mis_pvalores_var_num,row.names = nombres_variables)
+colnames(mis_pvalores_var_num)[1] <- "pvalores"
+
+```
+
+### Modelos lineales generalizados para variables categóricas
+
+Cuando hacemos un modelo lineal generalizado y consideramos la interacción de dos variables categóricas, la visualización es un poco más compleja. Como estamos analizando variables categóricas, hay que considerar la manera en que influye cada nivel en cada variable. Como solo tenemos una variable categorica en adición a nuestra variable *target*, solo hemos creado un modelo. Para este modelo, solo la mitad de los niveles salieron estadisticamente significativos.
+
+```{r}
+mis_pvalores_var_fac <- NULL
+modelo_var_fac <- glm(mis_datos[,12] ~ mis_datos[,11], family = binomial(link = "logit"))
+mis_pvalores_var_fac <- c(mis_pvalores_var_fac, (summary(modelo_var_fac)$coefficients[1:max(nlevels(mis_datos[,11])),4]))
+mis_pvalores_var_fac <- data.frame(mis_pvalores_var_fac,row.names = levels(mis_datos$Group))
+colnames(mis_pvalores_var_fac)[1] <- "pvalores"
+
+```
+
+Luego de adquirir los valores p de cada modelo, hemos unido todos los valores p en un data frame con dos columnas. En una columna tenemos los nombres de cada variable y los niveles de nuestra variable categórica *Group*. En la siguiente columna tenemos los valores p que le corresponden a cada nombre.
+
+```{r}
+#Unir pvalores para ambos tipos de variables
+mis_pvalores <- rbind(mis_pvalores_var_num,mis_pvalores_var_fac)
+
+
+```
+
+### Dummy variables
+
+Antes de crear nuestros modelos multivariantes, es necesario crear a lo que se consideran variables dummy. Se crean estas variables porque al hacerlas, podemos identificar el nivel al que pertenecen las observaciones.
+
+```{r}
+#Crear dummies
+Group1 <- ifelse(mis_datos$Group == 'Group_1',0,1)
+Group2 <- ifelse(mis_datos$Group == 'Group_2',0,1)
+Group3 <- ifelse(mis_datos$Group == 'Group_3',0,1)
+Group4 <- ifelse(mis_datos$Group == 'Group_4',0,1)
+Group5 <- ifelse(mis_datos$Group == 'Group_5',0,1)
+Group6 <- ifelse(mis_datos$Group == 'Group_6',0,1)
+Group7 <- ifelse(mis_datos$Group == 'Group_7',0,1)
+Group8 <- ifelse(mis_datos$Group == 'Group_8',0,1)
+
+
+```
+
+### Modelos Multivariantes
+
+En nuestro primer modelo multivariante, hemos incluído todas las variables numéricas y cada nivel de las variable categórica *Group* excepto aquellas que no salían estadísticamente significativas como Group1, Group3 y Group7. Luego de correr varios modelos multivariantes, solo nos hemos quedado con aquellas que son estadísticamente significativas al final de cada modelo.
+
+```{r}
+modelo_multivariante <- glm(Class ~ Clump_Thickness + Uniformity_of_Cell_Size + Uniformity_of_Cell_Shape + Marginal_Adhesion + Single_Epithelial_Cell_Size + Bare_Nuclei + Bland_Chromatin + Normal_Nucleoli + Mitoses + Group2 + Group4 + Group5 + Group6 + Group8, data = mis_datos, family = binomial(link = "logit"))
+summary(modelo_multivariante)
+```
+
+```{r}
+modelo_multivariante <- glm(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin + Group2, data = mis_datos, family = binomial(link = "logit"))
+summary(modelo_multivariante)
+```
+
+```{r}
+modelo_multivariante <- glm(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin, data = mis_datos, family = binomial(link = "logit"))
+summary(modelo_multivariante)
+```
+
+### Modificación de datos para *Testing*
+
+Al igual que los datos utilizados para el *training*, es necesario modificar los datos que utilizaremos para el *testing*. Habían problemas similares en este archivo de datos como tener que separar las columnas por el delimiter específico, cambian valores que no se encotraban en el rango adecuado y cambiar valores con signos interrogativos a *NA*. En adición, hemos dividido las variables entre numéricas y categóricas y luego hemos otorgado los niveles adecuados para cada variable categórica. Por último, hemos creado variables dummy para la variable categórica *Group*.
+
+```{r}
+test_data <- read.csv("Breast_Cancer_test.data", sep = "\\" , header = FALSE)
+test_data <- data.frame(lapply(X = test_data, FUN = function(t) gsub(pattern = '/', replacement = "", x = t, fixed = TRUE)))
+colnames(test_data) <- c("Sample_Code_Number","Clump_Thickness","Uniformity_of_Cell_Size","Uniformity_of_Cell_Shape","Marginal_Adhesion","Single_Epithelial_Cell_Size","Bare_Nuclei","Bland_Chromatin","Normal_Nucleoli","Mitoses","Group")
+
+test_data[test_data == "?"] <- NA
+test_data <- test_data %>% 
+  mutate_if(is.character,as.numeric)
+
+# Columna Clump_Thickness
+unique(test_data$Clump_Thickness)
+test_data$Clump_Thickness[test_data$Clump_Thickness == 80] <- 8
+
+# Columna Uniformity_of_Cell_Size
+unique(test_data$Uniformity_of_Cell_Size)
+test_data$Uniformity_of_Cell_Size[test_data$Uniformity_of_Cell_Size == 30] <- 3
+
+# Columna Uniformity_of_Cell_Shape
+unique(test_data$Uniformity_of_Cell_Shape)
+
+# Columna Marginal_Adhesion
+unique(test_data$Marginal_Adhesion)
+
+# Columna Single_Epithelial_Cell_size
+unique(test_data$Single_Epithelial_Cell_Size)
+
+# Columna Bare_Nuclei
+unique(test_data$Bare_Nuclei)
+
+# Columna Normal_Nucleoli
+unique(test_data$Normal_Nucleoli)
+
+# Columna Bland_Chromatin
+unique(test_data$Bland_Chromatin)
+
+# Columna Normal_Nucleoli
+unique(test_data$Normal_Nucleoli)
+
+# Columna Mitoses
+unique(test_data$Mitoses)
+
+# Columna Group
+unique(test_data$Group)
+test_data$Group[test_data$Group == 60] <- 6
+test_data$Group <- as.factor(test_data$Group)
+levels(test_data$Group) <- c('Group_1','Group_2','Group_3','Group_4','Group_5','Group_6','Group_7','Group_8')
+
+Group1 <- ifelse(test_data$Group == 'Group_1',0,1)
+Group2 <- ifelse(test_data$Group == 'Group_2',0,1)
+Group3 <- ifelse(test_data$Group == 'Group_3',0,1)
+Group4 <- ifelse(test_data$Group == 'Group_4',0,1)
+Group5 <- ifelse(test_data$Group == 'Group_5',0,1)
+Group6 <- ifelse(test_data$Group == 'Group_6',0,1)
+Group7 <- ifelse(test_data$Group == 'Group_7',0,1)
+Group8 <- ifelse(test_data$Group == 'Group_8',0,1)
+
+
+```
+
+### Modelo predictivo
+
+El último paso de nuestro modelo predictivo es hacer nuestras predicciones. Utilizando el model multivariante óptimo con las variables predictoras adecuadas. Hemos usado la técnica de cross-validation en donde evaluamos la eficencia de nuestro modelo ya que es entrenado por un subconjunto de nuestra base de datos y luego hacemos el *testing* con datos que el modelo aún no ha visto. Luego de correr el modelo varias veces, he determinado que el *accuracy* de nuestro modelo tiene una media de 0.96.
+
+```{r}
+library(caret)
+trainIndex <- createDataPartition(y = mis_datos$Class, p = 0.8, list = FALSE)
+training <- mis_datos
+model <- train(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin, data = training, method = "glm", family = "binomial", na.action = na.pass)
+predictions <- predict(model, newdata = test_data, type = "raw")
+length(predictions) <- length(test_data$Sample_Code_Number)
+mis_resultados <- data.frame(sample_id = test_data$Sample_Code_Number , predicted_value = predictions)
+
+print(model)
+print(predictions)
+
+mis_resultados2 <-write.csv(mis_resultados, "mis_resultados.csv", row.names=TRUE)
+
+
+```
