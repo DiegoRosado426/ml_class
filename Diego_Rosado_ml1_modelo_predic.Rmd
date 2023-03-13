@@ -82,10 +82,13 @@ df_mis_variables <- data.frame(tipo_de_clase = tipo_clase)
 Para poder visualizar la distribución de los valores para las variables numéricas, hemos creado unos boxplots en donde dividimos los valores entre los pacientes que sí tienen un tumor benigno y aquellos que tienen un tumor maligno. Como tenemos 9 variables numéricas en nuestro conjunto de datos, hemos creado 9 boxplots distintas para cada variable.
 
 ```{r}
-par(mfrow = c(2,5))
+pdf("mis_boxplots.pdf")
+par(mfrow = c(3,3))
 for(i in 2:10) {
   boxplot(mis_datos[,i] ~ mis_datos[,12], main =paste0(names(mis_datos[i])," ~ Class" ), xlab = NULL, ylab = NULL, col = "red")
 }
+dev.off()
+
 ```
 
 ### Distribución variables categóricas
@@ -93,9 +96,11 @@ for(i in 2:10) {
 Para poder observar la distribución de la otra variable categórica en el dataset aparte de nuestra variable *target*, no podemos utilizar un boxplot como hicimos con las variables numéricas. Es por eso que utilizamos barplots para poder observar las distribución de esta variable. Los niveles de esta variable categórica luego son divididos entre ocho grupos que le corresponden a cada reportaje del Dr. Wolberg con una cierta cantidad de casos clínicos.
 
 ```{r}
+pdf("dist_groups.pdf")
 valores = table(mis_datos[,12],mis_datos[,11])
 proporciones1 = prop.table(valores)
-barplot(proporciones1, main = colnames(mis_datos[,11]),legend.text = TRUE,args.legend = list(cex = 0.60), cex.names = 0.8, col = c("red","blue"),beside = FALSE)
+barplot(proporciones1, main = colnames(mis_datos[,11]),legend.text = TRUE,args.legend = list(cex = 0.60), cex.names = 0.8, col = c("red","black"),beside = FALSE)
+dev.off()
 
 ```
 
@@ -166,12 +171,12 @@ summary(modelo_multivariante)
 ```
 
 ```{r}
-modelo_multivariante <- glm(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin + Group2, data = mis_datos, family = binomial(link = "logit"))
+modelo_multivariante <- glm(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin + Normal_Nucleoli + Group2, data = mis_datos, family = binomial(link = "logit"))
 summary(modelo_multivariante)
 ```
 
 ```{r}
-modelo_multivariante <- glm(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin, data = mis_datos, family = binomial(link = "logit"))
+modelo_multivariante <- glm(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin + Normal_Nucleoli, data = mis_datos, family = binomial(link = "logit"))
 summary(modelo_multivariante)
 ```
 
@@ -246,7 +251,7 @@ El último paso de nuestro modelo predictivo es hacer nuestras predicciones. Uti
 library(caret)
 trainIndex <- createDataPartition(y = mis_datos$Class, p = 0.8, list = FALSE)
 training <- mis_datos
-model <- train(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin, data = training, method = "glm", family = "binomial", na.action = na.pass)
+model <- train(Class ~ Clump_Thickness + Marginal_Adhesion + Bare_Nuclei + Bland_Chromatin + Normal_Nucleoli, data = training, method = "glm", family = "binomial", na.action = na.pass)
 predictions <- predict(model, newdata = test_data, type = "raw")
 length(predictions) <- length(test_data$Sample_Code_Number)
 mis_resultados <- data.frame(sample_id = test_data$Sample_Code_Number , predicted_value = predictions)
